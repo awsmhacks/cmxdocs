@@ -1,0 +1,57 @@
+- title: Home
+  url: /index
+
+- title: Installation
+  url: /general/install
+
+- title: General Usage
+  sublinks:
+    - title: Overview
+      url: /general/general
+    - title: Configuration
+      url: /general/configuration
+    - title: Understanding Output
+      url: /general/output
+
+- title: SMB
+  sublinks:
+    - title: SMB Overview
+      url: /smb/smb
+    - title: Host Enum
+      url: /smb/smb-host-enum
+    - title: Network Enum
+      url: /smb/smb-net-enum
+    - title: Password Spraying
+      url: /smb/smb-pass-spray
+    - title: separator
+    - title: SMB Command Reference
+      url: /smb/smb-command-ref
+
+- title: Azure
+  sublinks:
+    - title: Azure Overview
+      url: /azure/azure
+    - title: Azure Enum
+      url: /azure/azure-enum
+    - title: Azure Privilege Checks
+      url: /azure/azure-privs
+    - title: Azure Exploitation
+      url: /azure/azure-sploits
+    - title: separator
+    - title: Azure Command Reference
+      url: /azure/azure-command-ref
+            
+- title: CMX Database
+  url: /cmxdb/cmxdb
+  sublinks:
+    - title: Using the Database
+      url: /cmxdb/cmxdb-usage
+    - title: CMXDB Command Reference
+      url: /cmxdb/cmxdb-command-ref
+
+- title: About   
+  sublinks:
+  - title: About
+    url: /general/about
+  - title: Dev
+    url: /general/dev
