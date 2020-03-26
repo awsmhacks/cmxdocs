@@ -7,7 +7,6 @@ Created by: @awsmhacks
 Updated: 3/25/20  
 CMX Version: 0.0.1.azdev1
 
-For explanation on this guides' format go to [CMX Docs Usage](https://github.com/awsmhacks/CrackMapExtreme/blob/master/docs/CMX-Usage-Home.md)
 
 **Notes:**
 * The following examples assume you have a Kali/Windows host connected to an internal network.
