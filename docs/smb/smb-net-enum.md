@@ -11,7 +11,8 @@ CMX Version: 0.0.1.azdev1
 **Notes:**
 * The following examples assume you have a Kali/Windows host connected to an internal network.
 * If you are running from Kali, be sure to escape special chars i.e ($,!)
-* Dont trust the opsec safe just yet. Generally this applies to windows defender only, working on adding crowdstrike detections. 
+* OPsec_safe results are from testing against crowdstrike on 4/3/2020. 
+* These might not be opsec safe if you are in an environment with ATA or other domain controller watchdogs
 
 Network(Domain) Recon Sections  
   
@@ -25,7 +26,7 @@ Network(Domain) Recon Sections
 
 Need updates/Still need to document examples:  
 X. [Dumping Domain Passwords](#dump)  
-X. [Retrieve Password Policy](#password-policy)  
+
 
 
 ------------------------------------------------------------------------
@@ -36,7 +37,7 @@ X. [Retrieve Password Policy](#password-policy)
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| true          | true       | false       | false       | true*      |
+| true          | true        | false       | false       | true       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -84,7 +85,7 @@ Mar.26.20 16:37:09  SMB      192.168.0.104:445  SERVER2016A    SWAMP\BRITTNEY_FE
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | TRUE        | false       | false       | TRUE*      |
+| TRUE          | TRUE        | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -127,7 +128,7 @@ Mar.26.20 16:38:50  SMB      192.168.0.104:445  SERVER2016A    39-arl-distlist  
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | TRUE        | false       | false       | TRUE*      |
+| TRUE          | TRUE        | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -157,7 +158,7 @@ Note: Doesnt grab nested groups.
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | TRUE        | false       | false       | TRUE*      |
+| TRUE          | TRUE        | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
@@ -234,7 +235,7 @@ Mar.26.20 16:41:17  SMB      192.168.0.104:445  SERVER2016A [-]     Member with 
 |---------------+-------------+-------------+-------------+------------|
 | Multiple_Host | Requires DC | Requires LA | Requires DA | Opsec_safe |
 |---------------|-------------|-------------|-------------|------------|
-| TRUE          | TRUE        | false       | false       | TRUE*      |
+| TRUE          | TRUE        | false       | false       | TRUE       |
 |---------------+-------------+-------------+-------------+------------|
 {: .tablelines}
 
